@@ -44,16 +44,16 @@ fi
 echo ""
 echo "📱 STARTING MOBILE AUDIT (Default Throttling)..."
 echo "   • Runs per URL: $RUNS"
-npx --yes lhci collect $URL_FLAGS --numberOfRuns=$RUNS
-npx --yes lhci upload --target=filesystem --outputDir="./$RUN_DIR/mobile"
+lhci collect $URL_FLAGS --numberOfRuns=$RUNS
+lhci upload --target=filesystem --outputDir="./$RUN_DIR/mobile"
 
 # --- RUN 2: DESKTOP AUDIT ---
 rm -rf .lighthouseci
 echo ""
 echo "🖥️  STARTING DESKTOP AUDIT (Unthrottled)..."
 echo "   • Runs per URL: $RUNS"
-npx --yes lhci collect $URL_FLAGS --numberOfRuns=$RUNS --settings.preset=desktop
-npx --yes lhci upload --target=filesystem --outputDir="./$RUN_DIR/desktop"
+lhci collect $URL_FLAGS --numberOfRuns=$RUNS --settings.preset=desktop
+lhci upload --target=filesystem --outputDir="./$RUN_DIR/desktop"
 
 # --- STEP 4: GENERATE HTML DASHBOARD ---
 echo ""
