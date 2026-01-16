@@ -1,3 +1,21 @@
-node_modules
-package.json
-package-lock.json
+# --- Dependencies & System ---
+node_modules/
+.DS_Store
+Thumbs.db
+
+# --- Generated Script ---
+# This is created by create.sh, so we likely don't want to track it
+# unless you intend to distribute the runner directly.
+run-audit.sh
+
+# --- Output Data ---
+# Ignores the heavy reports containing HTML/JSON
+reports/
+
+# --- Lighthouse CI Cache ---
+.lighthouseci/
+
+# --- User Input ---
+# Optional: Ignore specific URL lists to keep user data private
+urls.txt
+!urls.sample.txt
