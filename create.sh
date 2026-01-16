@@ -90,6 +90,21 @@ try {
         return runs[Math.floor(runs.length / 2)];
     };
 
+    // Attempt to extract Page Title from LHR
+    const getPageTitle = (jsonPath) => {
+        try {
+            if (!jsonPath || !fs.existsSync(jsonPath)) return null;
+            const lhr = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+            // Try getting title from audits
+            // Note: 'document-title' audit usually contains the title in 'title' or 'displayValue' logic
+            // But strict 'title' often just says "Document has a title".
+            // We'll rely on a clean fallback or check specific properties if available.
+            // A reliable fallback in LH is often not straightforward without the HTML, 
+            // but let's try to parse the URL path if title is generic.
+            return null; // For now returning null to force URL path logic, or implement complex parsing
+        } catch(e) { return null; }
+    };
+
     const fmt = (val) => val === undefined ? '-' : Math.round(val * 100);
     
     const getScoreClass = (score) => {
@@ -121,7 +136,7 @@ try {
         <title>Audit: ${domain}</title>
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f9f9f9; color: #333; margin: 0; padding: 40px; }
-            .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+            .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
             h1 { margin-top: 0; margin-bottom: 5px;}
             .meta { color: #666; font-size: 0.9em; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
             
@@ -139,19 +154,31 @@ try {
             .slash { color: #ccc; margin: 0 4px; }
 
             .recommendations { margin-top: 40px; padding-top: 20px; border-top: 2px solid #eee; }
-            .rec-group { margin-bottom: 30px; }
+            .rec-container { display: flex; gap: 30px; }
+            .rec-column { flex: 1; }
+            
             .rec-header { display: flex; align-items: center; margin-bottom: 15px; } 
-            .rec-header h2 { margin: 0; font-size: 1.3em; }
+            .rec-header h2 { margin: 0; font-size: 1.1em; }
             .rec-header .tag { margin-left: 10px; padding: 2px 8px; border-radius: 4px; font-size: 0.7em; text-transform: uppercase; font-weight: bold; }
             .tag.mobile { background: #e3f2fd; color: #1565c0; }
             .tag.desktop { background: #f3e5f5; color: #7b1fa2; }
 
             .rec-item { margin-bottom: 10px; padding: 12px; background: #f8f9fa; border-left: 4px solid #333; border-radius: 4px; }
-            .rec-title { font-weight: bold; font-size: 1em; color: #222; }
-            .rec-impact { color: #666; margin-top: 4px; font-size: 0.9em; }
+            .rec-title { font-weight: bold; font-size: 0.95em; color: #222; }
+            .rec-impact { color: #666; margin-top: 4px; font-size: 0.85em; }
             .rec-badge { background: #e0e0e0; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; margin-right: 8px; }
             
             .folder-path { font-family: monospace; background: #eee; padding: 2px 5px; border-radius: 3px; }
+            .page-title { font-weight: 600; display: block; margin-bottom: 2px; }
+            .page-url { font-size: 0.8em; color: #888; text-decoration: none; font-family: monospace;}
+            .report-links { font-size: 0.8em; margin-top: 4px; }
+            .report-links a { color: #0066cc; text-decoration: none; }
+            .report-links a:hover { text-decoration: underline; }
+            .separator { color: #ccc; margin: 0 4px; }
+
+            @media (max-width: 800px) {
+                .rec-container { flex-direction: column; }
+            }
         </style>
     </head>
     <body>
@@ -166,8 +193,8 @@ try {
             <table>
                 <thead>
                     <tr>
-                        <th>URL</th>
-                        <th>Performance <br><span style="font-weight:normal; font-size:0.8em; color:#888">(Mob / Desk)</span></th>
+                        <th width="40%">Page</th>
+                        <th>Performance</th>
                         <th>Accessibility</th>
                         <th>Best Prac</th>
                         <th>SEO</th>
@@ -199,6 +226,13 @@ try {
 
         let shortUrl = url.replace('https://', '').replace('http://', '').replace('www.', '');
         const cleanShortUrl = shortUrl.length > 34 ? shortUrl.substring(0, 31) + '...' : shortUrl;
+        
+        // Try to get a nicer title from URL structure since LHR title is unreliable
+        const urlObj = new URL(url);
+        let niceTitle = urlObj.pathname === '/' ? 'Home' : urlObj.pathname.replace(/\//g, ' ').trim();
+        if(!niceTitle) niceTitle = "Home";
+        // Capitalize words
+        niceTitle = niceTitle.replace(/\b\w/g, l => l.toUpperCase());
 
         // Console
         const printCell = (m, d) => `${color(m)}${String(m).padStart(3)}${reset}/${color(d)}${String(d).padEnd(3)}${reset}`;
@@ -210,13 +244,17 @@ try {
                 <span class="${getScoreClass(m)}">${m}</span><span class="slash">/</span><span class="${getScoreClass(d)}">${d}</span>
             </div>`;
         
-        const reportLink = mRun ? path.basename(mRun.htmlPath) : '#';
+        const mLink = mRun ? `<a href="mobile/${path.basename(mRun.htmlPath)}" target="_blank">Mobile</a>` : '<span style="color:#ccc">Mobile</span>';
+        const dLink = dRun ? `<a href="desktop/${path.basename(dRun.htmlPath)}" target="_blank">Desktop</a>` : '<span style="color:#ccc">Desktop</span>';
         
         html += `
             <tr>
                 <td>
-                    <a href="${url}" target="_blank" style="color:#333; text-decoration:none; font-weight:500;">${shortUrl}</a>
-                    <br><span style="font-size:0.8em; color:#999;">(<a href="mobile/${reportLink}" style="color:#999;">view report</a>)</span>
+                    <span class="page-title">${niceTitle}</span>
+                    <a href="${url}" target="_blank" class="page-url">${url}</a>
+                    <div class="report-links">
+                        (view ${mLink} <span class="separator">|</span> ${dLink} report)
+                    </div>
                 </td>
                 <td>${htmlCell(mP, dP)}</td>
                 <td>${htmlCell(mA, dA)}</td>
@@ -252,30 +290,28 @@ try {
     };
 
     const renderRecommendations = (title, type, items) => {
-        // Console output
+        // Console output (Sequential)
         console.log(`\n🚀 \x1b[1m${title}\x1b[0m`);
-        if (items.length === 0) {
-            console.log("   🎉 No major performance issues found!");
-            return `<div class="rec-group">
-                <div class="rec-header"><h2>${title}</h2><span class="tag ${type}">${type}</span></div>
-                <p>🎉 No major performance issues found!</p>
-            </div>`;
-        }
-
+        
         let sectionHtml = `
-            <div class="rec-group">
+            <div class="rec-column">
                 <div class="rec-header"><h2>${title}</h2><span class="tag ${type}">${type}</span></div>
         `;
         
+        if (items.length === 0) {
+            console.log("   🎉 No major performance issues found!");
+            sectionHtml += `<p>🎉 No major performance issues found!</p></div>`;
+            return sectionHtml;
+        }
+
         items.forEach((op, index) => {
             const seconds = (op.totalSavings / 1000).toFixed(2);
-            console.log(`   ${index + 1}. \x1b[36m${op.title}\x1b[0m`);
-            console.log(`      impact: ~${seconds}s savings.`);
+            console.log(`   ${index + 1}. \x1b[36m${op.title}\x1b[0m (~${seconds}s)`);
 
             sectionHtml += `
                 <div class="rec-item">
                     <div class="rec-title"><span class="rec-badge">#${index+1}</span> ${op.title}</div>
-                    <div class="rec-impact">Potential savings: <strong>~${seconds}s</strong> cumulative load time.</div>
+                    <div class="rec-impact">Potential savings: <strong>~${seconds}s</strong> cumulative.</div>
                 </div>`;
         });
         
@@ -283,17 +319,17 @@ try {
         return sectionHtml;
     };
 
-    html += `<div class="recommendations">`;
+    html += `<div class="recommendations"><div class="rec-container">`;
     
     // Mobile Recs
     const mobileOps = getTopOpportunities(validMobileRuns, 5);
-    html += renderRecommendations("Top 5 High-Impact Actions (Mobile)", "mobile", mobileOps);
+    html += renderRecommendations("Top 5 Actions", "mobile", mobileOps);
 
     // Desktop Recs
     const desktopOps = getTopOpportunities(validDesktopRuns, 5);
-    html += renderRecommendations("Top 5 High-Impact Actions (Desktop)", "desktop", desktopOps);
+    html += renderRecommendations("Top 5 Actions", "desktop", desktopOps);
 
-    html += `</div></div></body></html>`;
+    html += `</div></div></div></body></html>`;
 
     fs.writeFileSync(outputPath, html);
     console.log("");
