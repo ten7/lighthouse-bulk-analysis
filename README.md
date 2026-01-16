@@ -10,6 +10,10 @@ A lightweight, automated Bash tool that performs bulk Lighthouse audits on a lis
 * **Visual Reports:** Generates a clean HTML dashboard identifying high-impact opportunities.
 * **Data Export:** Saves full Lighthouse HTML reports and JSON data for every run.
 
+
+https://github.com/user-attachments/assets/418fd04c-a9eb-4edc-a21f-be5e400801b3
+
+
 ## 🤝 Created & Supported by TEN7
 
 This script was created and is actively supported by the team at [TEN7](https://ten7.com).
