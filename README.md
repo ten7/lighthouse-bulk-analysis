@@ -26,12 +26,14 @@ We are a fully remote company that believes in transparency and open culture. If
 
 To use this tool, your system must have the following installed:
 
-1.  **Node.js (v14+)**: Required for running the audit engine.
-    * *Verify:* `node -v`
-2.  **Google Chrome**: The auditing engine requires a browser instance.
+1.  **Node.js (v14+) & NPM**: Required for running the audit engine and installing the CLI tool.
+    * *Verify:* ``` node -v ```
+2.  **Lighthouse CI CLI (`@lhci/cli`)**: The script relies on the `lhci` global command to perform the collection and upload steps.
+    * *Verify:* ``` lhci --version ```
+3.  **Google Chrome**: The auditing engine requires a browser instance to render the pages.
     * *macOS/Windows:* Standard installation works.
     * *Linux:* You may need `chromium-browser`.
-3.  **Bash Terminal**: Native on macOS/Linux. Windows users see below.
+4.  **Bash Terminal**: Native on macOS/Linux. Windows users should use WSL (Windows Subsystem for Linux).
 
 ## 🛠 Installation & Setup
 
@@ -41,12 +43,18 @@ To use this tool, your system must have the following installed:
     cd lighthouse-bulk-analysis
     ```
 
-2.  **Make the generator executable:**
+2.  **Install the Lighthouse CI CLI (Required):**
+    You must install this globally so the script can access the `lhci` command.
+    ```
+    npm install -g @lhci/cli
+    ```
+
+3.  **Make the generator executable:**
     ```
     chmod +x create.sh
     ```
 
-3.  **Create your URL list:**
+4.  **Create your URL list:**
     Create a file named `urls.txt` in the root directory. Add one full URL per line.
 
     *Example `urls.txt`:*
@@ -81,26 +89,27 @@ Execute the newly created script to start the process.
 ## 🖥 Operating System Support
 
 ### macOS (Recommended)
-Works natively. Ensure you have Node.js installed (e.g., via `brew install node`).
+Works natively.
+* Ensure Node.js and `@lhci/cli` are installed.
 
 ### Linux
 Works natively.
 * Ensure Chrome or Chromium is installed (`sudo apt install chromium-browser`).
-* If running on a server without a display (headless), Lighthouse handles this automatically, but ensure all dependencies for Chrome are present.
+* **Note:** The script ends with the `open` command to view the results folder. This is macOS-specific. On Linux, the audit will complete successfully, but you may see a "command not found" error for the final step. You can manually open the `reports/` folder.
 
 ### Windows
 This is a **Bash** script, so it will not run in standard Command Prompt or PowerShell.
 
 **Option A: WSL (Windows Subsystem for Linux) - Recommended**
 1.  Install WSL (Ubuntu).
-2.  Install Node.js and Chrome inside the WSL environment.
+2.  Install Node.js, Chrome, and the Lighthouse CLI (`npm install -g @lhci/cli`) inside the WSL environment.
 3.  Run the scripts exactly as shown in the Usage section.
 
 **Option B: Git Bash**
 1.  Install [Git for Windows](https://git-scm.com/download/win).
-2.  Open "Git Bash".
-3.  Run `./create.sh`.
-    * *Note:* You must have Node.js installed in Windows and accessible via your PATH.
+2.  Install Node.js in Windows.
+3.  Install the CLI: `npm install -g @lhci/cli` in your Windows terminal.
+4.  Open "Git Bash" and run `./create.sh`.
 
 ## 📂 Output Structure
 
