@@ -3,7 +3,7 @@ cat << 'EOF' > run-audit.sh
 
 # --- CONFIGURATION ---
 URL_FILE="urls.txt"
-RUNS=5
+RUNS=3
 # ---------------------
 
 # 1. Validation
@@ -24,18 +24,35 @@ mkdir -p "$RUN_DIR/desktop"
 
 echo "📂 Created Run Folder: $RUN_DIR"
 
-# 4. Build URL List
-echo "🔍 Reading URLs..."
-URL_FLAGS=""
-count=0
-while IFS= read -r url || [ -n "$url" ]; do
-    [[ -z "$url" || "$url" =~ ^# ]] && continue
-    echo "   - $url"
-    URL_FLAGS="$URL_FLAGS --url=$url"
-    ((count++))
-done < "$URL_FILE"
+# 4. Build Lighthouse Config File
+echo "🔍 Building lighthouserc.json..."
 
-if [ $count -eq 0 ]; then
+# Use Node to quickly read the text file, strip comments/empty lines, and output a JSON config
+node -e "
+const fs = require('fs');
+const urls = fs.readFileSync('$URL_FILE', 'utf8')
+  .split('\n')
+  .map(line => line.trim())
+  .filter(line => line.length > 0 && !line.startsWith('#'));
+
+if (urls.length === 0) {
+  console.error('❌ No valid URLs found.');
+  process.exit(1);
+}
+
+const config = {
+  ci: {
+    collect: {
+      url: urls,
+      numberOfRuns: $RUNS
+    }
+  }
+};
+fs.writeFileSync('lighthouserc.json', JSON.stringify(config, null, 2));
+"
+
+# Check if Node exited with an error (no URLs)
+if [ $? -ne 0 ]; then
     echo "❌ No valid URLs found."
     exit 1
 fi
@@ -44,7 +61,7 @@ fi
 echo ""
 echo "📱 STARTING MOBILE AUDIT (Default Throttling)..."
 echo "   • Runs per URL: $RUNS"
-lhci collect $URL_FLAGS --numberOfRuns=$RUNS
+lhci collect --config=lighthouserc.json
 lhci upload --target=filesystem --outputDir="./$RUN_DIR/mobile"
 
 # --- RUN 2: DESKTOP AUDIT ---
@@ -52,7 +69,7 @@ rm -rf .lighthouseci
 echo ""
 echo "🖥️  STARTING DESKTOP AUDIT (Unthrottled)..."
 echo "   • Runs per URL: $RUNS"
-lhci collect $URL_FLAGS --numberOfRuns=$RUNS --settings.preset=desktop
+lhci collect --config=lighthouserc.json --settings.preset=desktop
 lhci upload --target=filesystem --outputDir="./$RUN_DIR/desktop"
 
 # --- STEP 4: GENERATE HTML DASHBOARD ---
