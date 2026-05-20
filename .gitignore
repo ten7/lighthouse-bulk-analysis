@@ -3,11 +3,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# --- Generated Script ---
-# This is created by create.sh, so we likely don't want to track it
-# unless you intend to distribute the runner directly.
-run-audit.sh
-
 # --- Output Data ---
 # Ignores the heavy reports containing HTML/JSON
 reports/
