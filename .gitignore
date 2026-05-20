@@ -9,6 +9,7 @@ reports/
 
 # --- Lighthouse CI Cache ---
 .lighthouseci/
+lighthouserc.json
 
 # --- User Input ---
 # Optional: Ignore specific URL lists to keep user data private
