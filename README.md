@@ -1,6 +1,6 @@
 # Lighthouse Bulk Analysis
 
-> Run Google Lighthouse audits across dozens of URLs at once — mobile **and** desktop — and get a clean HTML dashboard plus a terminal summary in a single command.
+> Point it at a list of URLs. Get back a clean HTML dashboard — performance, accessibility, best practices, and SEO scored for both mobile and desktop — from one command.
 
 Built and maintained by [TEN7](https://ten7.com).
 
@@ -23,13 +23,15 @@ Built and maintained by [TEN7](https://ten7.com).
 
 ## What it does
 
-Lighthouse Bulk Analysis takes a plain text list of URLs and runs [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) against each one — multiple times, on both mobile and desktop — then produces:
+A slow site shuts people out — especially on the phones and older laptops your visitors actually use. We build for schools and nonprofits, so we check this work constantly. Auditing dozens of URLs by hand, twice each for mobile and desktop, gets old fast. This tool does it for you.
 
-- **An HTML dashboard** (`Summary_<domain>.html`) with scores for performance, accessibility, SEO, and best practices across every URL, plus links to full per-page reports and the top performance opportunities.
-- **A terminal summary** printed in real time while the audit runs.
-- **Raw artifacts** — full Lighthouse HTML and JSON reports for every run, organized in a timestamped folder under `reports/`.
+Give it a plain text list of URLs. It runs [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) against each one — several times, on mobile and desktop — and produces:
 
-To reduce noise, the dashboard uses the **median run by performance score** for each URL rather than any single run.
+- **An HTML dashboard** (`Summary_<domain>.html`) scoring performance, accessibility, SEO, and best practices for every URL. It links to the full per-page reports and ranks the top performance opportunities.
+- **A terminal summary.** While the audit runs, Lighthouse CI streams its own progress. When it finishes, you get a color-coded score table and the top opportunities printed right in your terminal.
+- **Raw artifacts** — the full Lighthouse HTML and JSON reports for every run, kept in a timestamped folder under `reports/`.
+
+Lighthouse scores wobble from run to run. That's normal, and it's why we run each URL several times and use the **median run by performance score** for the dashboard. One bad run won't skew your numbers.
 
 ---
 
@@ -42,11 +44,11 @@ urls.txt  ──►  run-audit.sh  ──►  lhci collect (mobile)   ──► 
                                                            ──►  terminal score table
 ```
 
-1. **`run-audit.sh`** reads `urls.txt`, dynamically writes a `lighthouserc.json`, and runs `lhci collect` + `lhci upload` twice — once with default mobile throttling and once with `--settings.preset=desktop`.
-2. Results land in a timestamped folder under `reports/`, with `mobile/` and `desktop/` subfolders each containing a `manifest.json` and the raw HTML/JSON reports.
-3. **`generate-dashboard.js`** reads the manifests, picks the median run per URL, prints the score table to the terminal, and writes the HTML dashboard.
+1. **`run-audit.sh`** reads `urls.txt`, writes a fresh `lighthouserc.json`, then runs `lhci collect` + `lhci upload` twice — once with default mobile throttling, once with `--settings.preset=desktop`.
+2. Results land in a timestamped folder under `reports/`, with `mobile/` and `desktop/` subfolders. Each holds a `manifest.json` and the raw HTML/JSON reports.
+3. **`generate-dashboard.js`** reads the manifests, picks the median run per URL, prints the score table, and writes the HTML dashboard.
 
-You only ever run `./run-audit.sh` — the Node script is called automatically at the end.
+You only ever run `./run-audit.sh`. It calls the Node script for you at the end.
 
 ---
 
@@ -54,7 +56,7 @@ You only ever run `./run-audit.sh` — the Node script is called automatically a
 
 | Requirement | Notes |
 |---|---|
-| **Node.js v14+** and npm | Verify: `node -v` |
+| **Node.js** and npm | Use the current LTS — v18+ is a safe bet. Lighthouse CI tracks supported Node versions, and older releases will fail to install. Verify: `node -v` |
 | **Lighthouse CI CLI** (`@lhci/cli`) | Verify: `lhci --version` |
 | **Google Chrome** | macOS/Windows: standard install. Linux: `sudo apt install chromium-browser` |
 | **Bash** | macOS/Linux: built-in. Windows: use WSL or Git Bash. |
@@ -88,7 +90,7 @@ chmod +x run-audit.sh
 cp urls.sample.txt urls.txt
 ```
 
-Edit `urls.txt` — one full URL per line. Lines starting with `#` are treated as comments and ignored.
+Edit `urls.txt` — one full URL per line. Lines starting with `#` are comments and get skipped.
 
 ```
 # Homepage and key landing pages
@@ -110,11 +112,11 @@ With `urls.txt` in place, run:
 That's it. The script will:
 
 1. Create a timestamped run folder at `reports/YYYY-MM-DD_HH-MM-SS_<domain>/`.
-2. Run Lighthouse CI `RUNS` times per URL on **mobile**, then repeat on **desktop**.
-3. Write the HTML dashboard and print a score table to the terminal.
-4. Automatically open the run folder when the audit finishes (macOS via `open`, Linux via `xdg-open`).
+2. Run Lighthouse CI `RUNS` times per URL on **mobile**, then again on **desktop**.
+3. Write the HTML dashboard and print a score table to your terminal.
+4. Open the run folder when it finishes (macOS via `open`, Linux via `xdg-open`).
 
-Open **`Summary_<domain>.html`** first for the overview, then follow the Mobile/Desktop links in each row to drill into full per-page Lighthouse reports.
+Open **`Summary_<domain>.html`** first for the overview. Then follow the Mobile and Desktop links in each row to drill into the full per-page reports.
 
 ---
 
@@ -132,9 +134,11 @@ RUNS=3
 | Variable | Default | Description |
 |---|---|---|
 | `URL_FILE` | `urls.txt` | Path to your URL list |
-| `RUNS` | `3` | Number of Lighthouse CI runs per URL per device type. Higher values reduce variance; lower values run faster. |
+| `RUNS` | `3` | Lighthouse CI runs per URL, per device type. More runs cut variance; fewer runs finish faster. |
 
-To change dashboard layout, score display, or opportunity ranking, edit `generate-dashboard.js` directly.
+The run folder and dashboard take their name from the domain of the **first** URL in your list. You can audit a mixed list of domains, but the folder name reflects whichever URL comes first.
+
+To change the dashboard layout, score display, or opportunity ranking, edit `generate-dashboard.js` directly.
 
 ---
 
@@ -156,7 +160,7 @@ reports/
         └── <hash>.report.json
 ```
 
-Both `reports/` and `.lighthouseci/` are gitignored — audit output stays local and is never committed.
+`reports/`, `.lighthouseci/`, `lighthouserc.json`, and your `urls.txt` are all gitignored. Your audit output and URL lists stay on your machine — nothing gets committed.
 
 ---
 
@@ -165,8 +169,8 @@ Both `reports/` and `.lighthouseci/` are gitignored — audit output stays local
 | OS | Status | Notes |
 |---|---|---|
 | **macOS** | ✅ Recommended | Works natively with Node.js, Chrome, and `@lhci/cli` installed. |
-| **Linux** | ✅ Supported | Install Chrome or Chromium. Results folder opens via `xdg-open` if available. |
-| **Windows** | ⚠️ Via WSL/Git Bash | Use WSL (recommended) or Git Bash with Node.js, Chrome, and `@lhci/cli` installed in that environment. |
+| **Linux** | ✅ Supported | Install Chrome or Chromium. The results folder opens via `xdg-open` if it's available. |
+| **Windows** | ⚠️ Via WSL/Git Bash | Use WSL (recommended) or Git Bash, with Node.js, Chrome, and `@lhci/cli` installed in that environment. |
 
 ---
 
@@ -174,12 +178,12 @@ Both `reports/` and `.lighthouseci/` are gitignored — audit output stays local
 
 | File | Role |
 |---|---|
-| `run-audit.sh` | Entry point: folder setup, `lighthouserc.json` generation, audit runs, dashboard invocation |
-| `generate-dashboard.js` | Reads Lighthouse CI manifests, picks median run per URL, writes HTML dashboard, prints terminal summary |
-| `urls.sample.txt` | Example URL list — copy to `urls.txt` to get started |
-| `urls.txt` | Your URL list (gitignored; not committed) |
-| `lighthouserc.json` | Auto-generated on each run from `urls.txt` and `RUNS` — do not edit manually |
-| `reports/` | All audit output (gitignored) |
+| `run-audit.sh` | Entry point. Sets up the folder, generates `lighthouserc.json`, runs the audits, and calls the dashboard. |
+| `generate-dashboard.js` | Reads the Lighthouse CI manifests, picks the median run per URL, writes the HTML dashboard, and prints the terminal summary. |
+| `urls.sample.txt` | Example URL list. Copy it to `urls.txt` to get started. |
+| `urls.txt` | Your URL list (gitignored). |
+| `lighthouserc.json` | Auto-generated on each run from `urls.txt` and `RUNS`. Don't edit it by hand. |
+| `reports/` | All audit output (gitignored). |
 
 ---
 
@@ -191,7 +195,7 @@ This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. 
 
 ## About TEN7
 
-This tool was created and is actively maintained by [TEN7](https://ten7.com), a digital agency that builds, rescues, and cares for Drupal sites. Our mission is to **Make Things That Matter**.
+We built and maintain this tool at [TEN7](https://ten7.com), a digital agency that builds, rescues, and cares for Drupal sites. Our mission is to **Make Things That Matter**.
 
 - 🌐 [ten7.com](https://ten7.com)
 - 📖 [handbook.ten7.com](https://handbook.ten7.com)
